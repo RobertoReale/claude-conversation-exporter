@@ -1,5 +1,6 @@
-javascript:(function() {
-    // Check if html2pdf is loaded, if not, dynamically load it
+// Claude Conversation PDF Exporter
+(function() {
+    // Check if html2pdf is loaded, if not, dynamically load the script
     if (typeof html2pdf === 'undefined') {
         var script = document.createElement('script');
         script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
@@ -9,7 +10,7 @@ javascript:(function() {
         initPDFExport();
     }
 
-    // Process list and paragraph styling for better PDF rendering
+    // Process list elements to improve PDF formatting
     function processListElements(element) {
         // Process all ordered and unordered lists
         element.querySelectorAll('ol, ul').forEach(list => {
@@ -45,17 +46,18 @@ javascript:(function() {
         return element;
     }
 
-    // Main function to export conversation to PDF
+    // Main function to export PDF
     function initPDFExport() {
-        // Find Claude message elements
+        // Find all Claude messages
         const claudeMessages = Array.from(document.getElementsByClassName('font-claude-message'));
         
+        // Check if any messages exist
         if (claudeMessages.length === 0) {
             alert('No Claude responses found in the conversation.');
             return;
         }
 
-        // Create container for PDF content
+        // Create container for PDF
         const container = document.createElement('div');
         container.style.padding = '20px';
         container.style.backgroundColor = 'white';
@@ -90,7 +92,7 @@ javascript:(function() {
             container.appendChild(wrapper);
         });
 
-        // PDF export configuration
+        // PDF export options
         const opt = {
             margin: [20, 20, 20, 20],
             filename: 'claude-responses.pdf',
@@ -110,7 +112,7 @@ javascript:(function() {
             pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
         };
 
-        // Generate and save PDF
+        // Generate PDF
         html2pdf().from(container).set(opt).save()
             .then(() => console.log('PDF generated successfully!'))
             .catch(err => {
