@@ -1,53 +1,121 @@
-# Claude Conversation PDF Exporter
+javascript:(function() {
+    // Check if html2pdf is loaded, if not, dynamically load it
+    if (typeof html2pdf === 'undefined') {
+        var script = document.createElement('script');
+        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
+        script.onload = initPDFExport;
+        document.head.appendChild(script);
+    } else {
+        initPDFExport();
+    }
 
-## Overview
+    // Process list and paragraph styling for better PDF rendering
+    function processListElements(element) {
+        // Process all ordered and unordered lists
+        element.querySelectorAll('ol, ul').forEach(list => {
+            list.style.paddingLeft = '30px';
+            list.style.marginLeft = '15px';
+            list.style.listStylePosition = 'outside';
+            
+            // Set proper list style based on list type
+            if (list.tagName === 'OL') {
+                list.style.listStyleType = 'decimal';
+            } else {
+                list.style.listStyleType = 'disc';
+            }
+            
+            // Process list items
+            list.querySelectorAll('li').forEach(li => {
+                li.style.marginBottom = '10px';
+                li.style.paddingLeft = '10px';
+                // Ensure content doesn't get cut off
+                li.style.breakInside = 'avoid';
+                li.style.pageBreakInside = 'avoid';
+            });
+        });
+        
+        // Fix paragraph spacing and prevent orphans
+        element.querySelectorAll('p').forEach(p => {
+            p.style.marginBottom = '15px';
+            p.style.lineHeight = '1.5';
+            p.style.breakInside = 'avoid';
+            p.style.pageBreakInside = 'avoid';
+        });
+        
+        return element;
+    }
 
-This is a JavaScript bookmarklet that allows you to export Claude conversations to a PDF directly from your browser. It uses the `html2pdf.js` library to convert the conversation messages into a cleanly formatted PDF document.
+    // Main function to export conversation to PDF
+    function initPDFExport() {
+        // Find Claude message elements
+        const claudeMessages = Array.from(document.getElementsByClassName('font-claude-message'));
+        
+        if (claudeMessages.length === 0) {
+            alert('No Claude responses found in the conversation.');
+            return;
+        }
 
-## Features
+        // Create container for PDF content
+        const container = document.createElement('div');
+        container.style.padding = '20px';
+        container.style.backgroundColor = 'white';
+        container.style.fontFamily = 'Arial, sans-serif';
+        container.style.fontSize = '14px';
+        container.style.color = '#2D3748';
+        
+        // Process each message
+        claudeMessages.forEach((message, index) => {
+            const wrapper = document.createElement('div');
+            wrapper.style.marginBottom = '30px';
+            wrapper.style.padding = '20px';
+            wrapper.style.borderBottom = '1px solid #E2E8F0';
+            // Prevent message splits across pages
+            wrapper.style.breakInside = 'avoid-page';
+            wrapper.style.pageBreakInside = 'avoid';
+            
+            // Add response number
+            const messageNumber = document.createElement('div');
+            messageNumber.style.fontSize = '16px';
+            messageNumber.style.fontWeight = 'bold';
+            messageNumber.style.color = '#4A5568';
+            messageNumber.style.marginBottom = '15px';
+            messageNumber.textContent = `Response #${index + 1}`;
+            
+            // Clone and process the message
+            const messageClone = message.cloneNode(true);
+            const processedMessage = processListElements(messageClone);
+            
+            wrapper.appendChild(messageNumber);
+            wrapper.appendChild(processedMessage);
+            container.appendChild(wrapper);
+        });
 
-- Extracts all Claude messages from the current conversation
-- Preserves formatting of lists and paragraphs
-- Adds page breaks to prevent content splitting
-- Generates a clean, readable PDF
+        // PDF export configuration
+        const opt = {
+            margin: [20, 20, 20, 20],
+            filename: 'claude-responses.pdf',
+            image: { type: 'jpeg', quality: 0.98 },
+            html2canvas: { 
+                scale: 2,
+                useCORS: true,
+                logging: false,
+                scrollY: -window.scrollY, // Fix for scrolled content
+                windowHeight: document.documentElement.offsetHeight
+            },
+            jsPDF: { 
+                unit: 'mm', 
+                format: 'a4', 
+                orientation: 'portrait'
+            },
+            pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+        };
 
-## Installation
-
-### Quick Start
-
-1. Create a new bookmark in your browser
-2. Edit the bookmark
-3. Replace the URL with the contents of the `bookmarklet.js` file
-
-### Detailed Steps
-
-1. Open your browser's bookmarks manager
-2. Click "Add New Bookmark"
-3. Give it a name like "Export Claude PDF"
-4. In the URL/Location field, paste the entire contents of the `bookmarklet.js` file
-5. Save the bookmark
-
-## Usage
-
-1. Navigate to a Claude conversation
-2. Click the bookmarklet you created
-3. The PDF will automatically generate and download
-
-## Dependencies
-
-- Requires `html2pdf.js` (automatically loaded by the script)
-- Works best in modern browsers (Chrome, Firefox, Safari, Edge)
-
-## Troubleshooting
-
-- If no PDF generates, ensure you're on a page with Claude messages
-- Check the browser console for any error messages
-- Refresh the page and try again
-
-## License
-
-[Choose an appropriate open-source license, e.g., MIT License]
-
-## Contributing
-
-Contributions are welcome! Please submit pull requests or open issues on the GitHub repository.
+        // Generate and save PDF
+        html2pdf().from(container).set(opt).save()
+            .then(() => console.log('PDF generated successfully!'))
+            .catch(err => {
+                console.error('Error generating PDF:', err);
+                alert('Error generating PDF. Check console for details.');
+            });
+    }
+})();
