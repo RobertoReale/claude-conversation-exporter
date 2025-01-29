@@ -2,30 +2,32 @@
 
 ## Overview
 
-This is a JavaScript bookmarklet that allows you to export Claude conversations to a PDF directly from your browser. It uses the `html2pdf.js` library to convert the conversation messages into a cleanly formatted PDF document.
-
-## Features
-
-- Extracts all Claude messages from the current conversation
-- Preserves formatting of lists and paragraphs
-- Adds page breaks to prevent content splitting
-- Generates a clean, readable PDF
+A JavaScript bookmarklet that exports Claude conversations to a PDF directly from your browser.
 
 ## Installation
 
-### Quick Start
+### Prerequisites
 
-1. Create a new bookmark in your browser
-2. Edit the bookmark
-3. Replace the URL with the contents of the `bookmarklet.js` file
+- A modern web browser (Chrome, Firefox, Safari, Edge)
 
-### Detailed Steps
+### Quick Setup
 
-1. Open your browser's bookmarks manager
-2. Click "Add New Bookmark"
-3. Give it a name like "Export Claude PDF"
-4. In the URL/Location field, paste the entire contents of the `bookmarklet.js` file
-5. Save the bookmark
+1. Copy the minified bookmarklet code from `bookmarklet.min.js`
+2. Create a new bookmark in your browser
+3. Edit the bookmark and paste the minified code into the URL/Location field
+
+### Development Setup
+
+#### Requirements
+- Node.js
+- npm
+
+#### Installation Steps
+```bash
+git clone https://github.com/yourusername/claude-pdf-exporter.git
+cd claude-pdf-exporter
+npm install
+```
 
 ## Usage
 
@@ -33,21 +35,32 @@ This is a JavaScript bookmarklet that allows you to export Claude conversations 
 2. Click the bookmarklet you created
 3. The PDF will automatically generate and download
 
-## Dependencies
+## Development
 
-- Requires `html2pdf.js` (automatically loaded by the script)
-- Works best in modern browsers (Chrome, Firefox, Safari, Edge)
+### Minifying the Bookmarklet
+
+To minify the bookmarklet:
+
+```bash
+npm run minify
+```
+
+This will create a minified version in `bookmarklet.min.js`
 
 ## Troubleshooting
 
-- If no PDF generates, ensure you're on a page with Claude messages
-- Check the browser console for any error messages
+- Ensure you're using the minified version
+- Check browser console for any error messages
 - Refresh the page and try again
+
+## Dependencies
+
+- Requires `html2pdf.js` (automatically loaded by the script)
 
 ## License
 
-[Choose an appropriate open-source license, e.g., MIT License]
+MIT License
 
 ## Contributing
 
-Contributions are welcome! Please submit pull requests or open issues on the GitHub repository.
+Contributions are welcome! Please submit pull requests or open issues.
