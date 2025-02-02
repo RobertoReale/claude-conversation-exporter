@@ -1,108 +1,97 @@
 javascript:!function(){if("undefined"==typeof html2pdf){var e=document.createElement("script");e.src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js",e.onload=t,document.head.appendChild(e)}else t();function t(){
-    // Get both Claude and user messages
-    let claudeMessages = Array.from(document.getElementsByClassName("font-claude-message"));
-    let userMessages = Array.from(document.getElementsByClassName("font-user-message"));
-    
-    // Combine and sort messages by their DOM position
-    let allMessages = [...claudeMessages, ...userMessages].sort((a, b) => {
-        return a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1;
-    });
-
-    if(0 === allMessages.length) {
-        alert("No messages found in the conversation.");
+    // Find the main chat container
+    const mainContainer = document.querySelector("div.flex-1.flex.flex-col.gap-3.px-4");
+    if (!mainContainer) {
+        alert("Could not find Claude chat container");
         return;
     }
 
-    let container = document.createElement("div");
-    container.style.padding = "20px";
-    container.style.backgroundColor = "white";
-    container.style.fontFamily = "Arial, sans-serif";
-    container.style.fontSize = "14px";
-    container.style.color = "#2D3748";
-
-    // Add title and timestamp
+    // Create a clone of the container to avoid modifying the original
+    let container = mainContainer.cloneNode(true);
+    
+    // Add styling
+    const styleSheet = document.createElement("style");
+    styleSheet.textContent = `
+        .pdf-container {
+            background-color: white;
+            padding: 20px;
+            font-family: system-ui, -apple-system, sans-serif;
+            color: #2D3748;
+        }
+        .pdf-container ol {
+            list-style-type: decimal !important;
+            padding-left: 2.5em !important;
+            margin-left: .5em !important;
+            margin-top: 1em !important;
+            margin-bottom: 1em !important;
+        }
+        .pdf-container ol li {
+            padding-left: .5em !important;
+            margin-bottom: .5em !important;
+        }
+        .pdf-container ul {
+            list-style-type: disc !important;
+            padding-left: 2.5em !important;
+            margin-left: .5em !important;
+            margin-top: 1em !important;
+            margin-bottom: 1em !important;
+        }
+        .pdf-container ul li {
+            padding-left: .5em !important;
+            margin-bottom: .5em !important;
+        }
+        .pdf-container pre, .pdf-container code {
+            background-color: #F7FAFC;
+            padding: 8px;
+            border-radius: 4px;
+            margin: 10px 0;
+            overflow-x: auto;
+            font-family: monospace;
+        }
+        .pdf-container .font-user-message,
+        .pdf-container .font-claude-message {
+            background-color: white;
+            border-radius: 8px;
+            padding: 16px;
+            margin: 8px 0;
+        }
+        .pdf-container p {
+            margin-bottom: 1em;
+        }
+    `;
+    document.head.appendChild(styleSheet);
+    
+    // Create wrapper with header
+    let wrapper = document.createElement("div");
+    wrapper.className = "pdf-container";
+    
+    // Add header with title and timestamp
     let header = document.createElement("div");
     header.style.textAlign = "center";
     header.style.marginBottom = "30px";
     let title = document.createElement("h1");
-    title.style.fontSize = "24px";
+    title.style.fontSize = "18px";
     title.style.marginBottom = "10px";
     title.textContent = document.querySelector("button[data-testid='chat-menu-trigger']")?.textContent || "Chat Conversation";
     let timestamp = document.createElement("div");
     timestamp.style.fontSize = "12px";
     timestamp.style.color = "#666";
+    timestamp.style.opacity = "0.7";
     timestamp.textContent = new Date().toLocaleString();
     header.appendChild(title);
     header.appendChild(timestamp);
-    container.appendChild(header);
-
-    allMessages.forEach((msg, index) => {
-        let messageDiv = document.createElement("div");
-        messageDiv.style.marginBottom = "30px";
-        messageDiv.style.padding = "20px";
-        messageDiv.style.borderBottom = "1px solid #E2E8F0";
-        messageDiv.style.breakInside = "avoid-page";
-        messageDiv.style.pageBreakInside = "avoid";
-
-        let messageHeader = document.createElement("div");
-        messageHeader.style.fontSize = "16px";
-        messageHeader.style.fontWeight = "bold";
-        messageHeader.style.color = "#4A5568";
-        messageHeader.style.marginBottom = "15px";
-        messageHeader.style.backgroundColor = msg.classList.contains("font-user-message") ? "#F7FAFC" : "#EBF8FF";
-        messageHeader.style.padding = "8px";
-        messageHeader.style.borderRadius = "4px";
-        messageHeader.textContent = msg.classList.contains("font-user-message") ? `User Message #${Math.floor(index/2 + 1)}` : `Claude Response #${Math.floor(index/2 + 1)}`;
-
-        let content = msg.cloneNode(true);
-        content = styleContent(content);
-
-        messageDiv.appendChild(messageHeader);
-        messageDiv.appendChild(content);
-        container.appendChild(messageDiv);
-    });
-
-    function styleContent(element) {
-        // Style lists
-        element.querySelectorAll("ol, ul").forEach(list => {
-            list.style.paddingLeft = "30px";
-            list.style.marginLeft = "15px";
-            list.style.listStylePosition = "outside";
-            list.style.listStyleType = list.tagName === "OL" ? "decimal" : "disc";
-            
-            list.querySelectorAll("li").forEach(item => {
-                item.style.marginBottom = "10px";
-                item.style.paddingLeft = "10px";
-                item.style.breakInside = "avoid";
-                item.style.pageBreakInside = "avoid";
-            });
-        });
-
-        // Style paragraphs
-        element.querySelectorAll("p").forEach(p => {
-            p.style.marginBottom = "15px";
-            p.style.lineHeight = "1.5";
-            p.style.breakInside = "avoid";
-            p.style.pageBreakInside = "avoid";
-        });
-
-        // Style code blocks
-        element.querySelectorAll("pre, code").forEach(code => {
-            code.style.fontFamily = "monospace";
-            code.style.backgroundColor = "#F7FAFC";
-            code.style.padding = "8px";
-            code.style.borderRadius = "4px";
-            code.style.margin = "10px 0";
-            code.style.overflowX = "auto";
-        });
-
-        return element;
-    }
+    
+    // Add content
+    wrapper.appendChild(header);
+    wrapper.appendChild(container);
 
     let options = {
         margin: [20, 20, 20, 20],
-        filename: "chat-conversation.pdf",
-        image: { type: "jpeg", quality: 0.98 },
+        filename: "claude-chat.pdf",
+        image: { 
+            type: "jpeg", 
+            quality: 0.98 
+        },
         html2canvas: {
             scale: 2,
             useCORS: true,
@@ -115,13 +104,19 @@ javascript:!function(){if("undefined"==typeof html2pdf){var e=document.createEle
             format: "a4",
             orientation: "portrait"
         },
-        pagebreak: { mode: ["avoid-all", "css", "legacy"] }
+        pagebreak: { 
+            mode: ["avoid-all", "css", "legacy"]
+        }
     };
 
-    html2pdf().from(container).set(options).save()
-        .then(() => console.log("PDF generated successfully!"))
+    html2pdf().from(wrapper).set(options).save()
+        .then(() => {
+            console.log("PDF generated successfully!");
+            styleSheet.remove();
+        })
         .catch(err => {
             console.error("Error generating PDF:", err);
             alert("Error generating PDF. Check console for details.");
+            styleSheet.remove();
         });
 }}();
