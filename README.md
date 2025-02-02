@@ -109,6 +109,7 @@ javascript:(function()%7Bif(!window.location.href.includes(%27claude.ai%27))%7Ba
 
 * html2pdf.js
 * html2canvas
+* jspdf
 
 ## License
 
