@@ -25,8 +25,6 @@ This is a bookmarklet that allows you to export Claude conversations to either P
 2. Edit the bookmark
 3. Replace the URL with the minified version of the code (see below)
 
-### Method 2: Browser Extension (Coming Soon)
-
 ## Usage
 
 1. Open a conversation in Claude
