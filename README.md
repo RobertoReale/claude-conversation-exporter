@@ -39,56 +39,79 @@ Copy the minified version of the code below and create a new bookmark with this 
 
 PDF:
 ```javascript
-javascript:!function(){if(!window.location.href.includes("claude.ai")){alert("This bookmarklet only works on Claude chat pages");return}function e(e){return new Promise((t,n)=>{if(document.querySelector(`script[src="${e}"]`)){t();return}let i=document.createElement("script");i.src=e,i.onload=t,i.onerror=n,document.head.appendChild(i)})}Promise.all([e("https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"),e("https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js")]).then(function e(){let t=document.querySelector("div.flex-1.flex.flex-col.gap-3.px-4");if(!t){alert("Could not find Claude chat container");return}let n=document.createElement("style");n.textContent=`
-            .pdf-container {
-                -webkit-font-smoothing: antialiased;
-                -moz-osx-font-smoothing: grayscale;
-                text-rendering: optimizeLegibility;
+javascript:!function(){let e={MAIN_CONTAINER:"div.flex-1.flex.flex-col.gap-3.px-4.max-w-3xl.mx-auto.w-full.pt-1",CHAT_TITLE:"button[data-testid='chat-menu-trigger']",USER_MESSAGES:"div.font-user-message"},t={SCALE:2,IMAGE_QUALITY:1,DPI:300},a=!1,n={styleSheet:null,header:null,containerClass:!1};function o(e,t=null){console.error(e,t),i(e,"error"),r()}function i(e,t="info"){let a=document.createElement("div");a.style.cssText=`
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 25px;
+            background: ${"error"===t?"#ff4444":"#44aa44"};
+            color: white;
+            border-radius: 5px;
+            z-index: 10000;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        `,a.textContent=e,document.body.appendChild(a),setTimeout(()=>a.remove(),3e3)}function r(){if(n.styleSheet&&n.styleSheet.remove(),n.header&&n.header.remove(),n.containerClass){let t=document.querySelector(e.MAIN_CONTAINER);t&&t.classList.remove("screenshot-container")}n={styleSheet:null,header:null,containerClass:!1}}if(!window.location.href.includes("claude.ai")){o("This bookmarklet only works on Claude chat pages");return}if(a){o("PDF generation already in progress");return}function l(e){return new Promise((t,a)=>{let n=document.createElement("script");n.src=e,n.onload=t,n.onerror=()=>a(Error(`Failed to load ${e}`)),document.head.appendChild(n)})}async function s(){a=!0;try{"undefined"==typeof html2canvas&&await l("https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"),"undefined"==typeof jspdf&&await l("https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"),a=!1,await c()}catch(e){a=!1,o("Failed to load required libraries",e)}}async function c(){let a=document.querySelector(e.MAIN_CONTAINER);if(!a)throw Error("Could not find Claude chat container");let o=document.createElement("style");o.textContent=`
+            .screenshot-container {
+                background-color: white !important;
+                color: black !important;
+                font-family: Arial, sans-serif !important;
+                line-height: 1.6 !important;
             }
-            .pdf-container ol {
+            .screenshot-container ol {
                 list-style-type: decimal !important;
                 padding-left: 2.5em !important;
                 margin-left: 0.5em !important;
                 margin-top: 1em !important;
                 margin-bottom: 1em !important;
             }
-            .pdf-container ol li {
+            .screenshot-container ol li {
                 padding-left: 0.5em !important;
                 margin-bottom: 0.5em !important;
             }
-            .pdf-container ul {
+            .screenshot-container ul {
                 list-style-type: disc !important;
                 padding-left: 2.5em !important;
                 margin-left: 0.5em !important;
                 margin-top: 1em !important;
                 margin-bottom: 1em !important;
             }
-            .pdf-container ul li {
+            .screenshot-container ul li {
                 padding-left: 0.5em !important;
                 margin-bottom: 0.5em !important;
             }
-            .pdf-container img {
+            .screenshot-container img {
                 display: inline-block;
-                image-rendering: -webkit-optimize-contrast;
-                image-rendering: crisp-edges;
+                max-width: 100%;
+                height: auto;
             }
-            .pdf-container pre, .pdf-container code {
+            .screenshot-container pre,
+            .screenshot-container code {
                 font-family: 'Courier New', Courier, monospace !important;
-                font-smooth: never;
-                -webkit-font-smoothing: none;
+                background-color: #f5f5f5 !important;
+                padding: 0.5em !important;
+                border-radius: 4px !important;
+                margin: 1em 0 !important;
             }
             body > div:last-child img {
                 display: inline-block;
+                max-width: 100%;
+                height: auto;
             }
-        `,document.head.appendChild(n),t.classList.add("pdf-container"),document.querySelectorAll("div.font-user-message").forEach(e=>{e.style.position="relative"});let i=document.querySelector("button[data-testid='chat-menu-trigger']")?.textContent||"",o=i.trim().toLowerCase().replace(/^[^\w\d]+|[^\w\d]+$/g,"").replace(/[\s\W-]+/g,"-")||"claude",r=document.createElement("div");r.style.cssText=`
-            position: absolute;
-            left: 0;
-            right: 0;
-            top: 8px;
-            text-align: center;
-            margin-bottom: 2em;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-        `;let a=document.createElement("h1");a.textContent=i,a.style.fontSize="18px",a.style.fontWeight="600";let l=document.createElement("p");l.textContent=new Date().toLocaleString(),l.style.cssText="font-size: 12px; opacity: 0.7;",r.appendChild(a),r.appendChild(l),t.prepend(r);let s=Math.max(2,window.devicePixelRatio||1);html2canvas(t,{logging:!1,letterRendering:!0,foreignObjectRendering:!1,useCORS:!0,scale:s,scrollY:-window.scrollY,windowWidth:document.documentElement.offsetWidth,windowHeight:document.documentElement.offsetHeight,onclone(e){let t=e.querySelector(".pdf-container");t.style.padding="20px",t.style.width="100%",t.querySelectorAll("pre, code").forEach(e=>{e.style.fontFamily="Courier New, Courier, monospace",e.style.fontSize="14px",e.style.lineHeight="1.4"})}}).then(e=>{let{jsPDF:t}=window.jspdf,n=new t({orientation:"p",unit:"px",format:[e.width/s,e.height/s],hotfixes:["px_scaling"],compress:!0}),i=e.toDataURL("image/jpeg",1);n.addImage(i,"JPEG",0,0,e.width/s,e.height/s,void 0,"FAST"),n.save(`${o}.pdf`)}).then(()=>{n.remove(),r.remove(),t.classList.remove("pdf-container")}).catch(e=>{alert("Error generating PDF: "+e.message),n?.remove(),r?.remove(),t.classList.remove("pdf-container")})}).catch(e=>alert("Error loading required libraries: "+e.message))}();
+            .chat-title-container {
+                margin-bottom: 1.5rem;
+                margin-top: 1.5rem;
+                border-bottom: 2px solid #eee;
+                padding-bottom: 1rem;
+            }
+            .chat-title-text {
+                font-size: 24px;
+                margin-bottom: 8px;
+                font-weight: bold;
+            }
+            .chat-timestamp {
+                font-size: 14px;
+                opacity: 0.7;
+            }
+        `,document.head.appendChild(o),n.styleSheet=o,a.classList.add("screenshot-container"),n.containerClass=!0;let l=document.querySelector(e.CHAT_TITLE),s=l?.textContent||"Claude Chat",c=s.trim().toLowerCase().replace(/^[^\w\d]+|[^\w\d]+$/g,"").replace(/[\s\W-]+/g,"-")||"claude",d=document.createElement("div"),m=document.createElement("div");m.className="mb-1 mt-1";let p=document.createElement("div");p.className="chat-title-text",p.textContent=s;let h=document.createElement("div");h.className="chat-timestamp",h.textContent=new Date().toLocaleString(),m.appendChild(p),m.appendChild(h),d.appendChild(m),a.insertBefore(d,a.firstChild),n.header=d;try{i("Generating high-quality PDF...");let f=await html2canvas(a,{logging:!1,letterRendering:!0,foreignObjectRendering:!1,useCORS:!0,scale:t.SCALE*(window.devicePixelRatio||1),allowTaint:!1,backgroundColor:"#ffffff",imageTimeout:0,onclone(e){let t=e.querySelector(".screenshot-container");t&&(t.style.padding="40px",t.style.webkitFontSmoothing="antialiased",t.style.mozOsxFontSmoothing="grayscale")}}),{jsPDF:g}=window.jspdf,u=new g({orientation:"portrait",unit:"px",format:[f.width,f.height],hotfixes:["px_scaling"],compress:!0});u.setProperties({title:s,creator:"Claude Chat Export",subject:"Chat Conversation",keywords:"claude, chat, conversation",creationDate:new Date}),u.addImage(f.toDataURL("image/jpeg",t.IMAGE_QUALITY),"JPEG",0,0,f.width,f.height,void 0,"FAST",0),u.save(`${c}-${Date.now()}.pdf`),i("High-quality PDF saved successfully")}finally{r()}}s().catch(e=>o("PDF generation failed",e))}();
 ```
 
 PNG:
