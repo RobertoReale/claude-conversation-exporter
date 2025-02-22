@@ -1,180 +1,277 @@
 javascript:(function(){
-    // Check if we're on a Claude page
+    // Constants
+    const SELECTORS = {
+        MAIN_CONTAINER: "div.flex-1.flex.flex-col.gap-3.px-4.max-w-3xl.mx-auto.w-full.pt-1",
+        CHAT_TITLE: "button[data-testid='chat-menu-trigger']",
+        USER_MESSAGES: "div.font-user-message"
+    };
+    
+    const HTML2CANVAS_URL = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+    const JSPDF_URL = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+    
+    // Quality settings
+    const QUALITY_SETTINGS = {
+        SCALE: 2,              // Increased from 1 to 2 for better resolution
+        IMAGE_QUALITY: 1,      // Maximum image quality (0-1)
+        DPI: 300              // Higher DPI for better print quality
+    };
+    
+    // State tracking
+    let isLoading = false;
+    let cleanup = {
+        styleSheet: null,
+        header: null,
+        containerClass: false
+    };
+
+    function handleError(message, error = null) {
+        console.error(message, error);
+        showNotification(message, 'error');
+        performCleanup();
+    }
+
+    function showNotification(message, type = 'info') {
+        const notification = document.createElement('div');
+        notification.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 25px;
+            background: ${type === 'error' ? '#ff4444' : '#44aa44'};
+            color: white;
+            border-radius: 5px;
+            z-index: 10000;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        `;
+        notification.textContent = message;
+        document.body.appendChild(notification);
+        setTimeout(() => notification.remove(), 3000);
+    }
+
+    function performCleanup() {
+        if (cleanup.styleSheet) {
+            cleanup.styleSheet.remove();
+        }
+        if (cleanup.header) {
+            cleanup.header.remove();
+        }
+        if (cleanup.containerClass) {
+            const container = document.querySelector(SELECTORS.MAIN_CONTAINER);
+            if (container) {
+                container.classList.remove('screenshot-container');
+            }
+        }
+        cleanup = {
+            styleSheet: null,
+            header: null,
+            containerClass: false
+        };
+    }
+
     if (!window.location.href.includes('claude.ai')) {
-        alert('This bookmarklet only works on Claude chat pages');
+        handleError('This bookmarklet only works on Claude chat pages');
         return;
     }
 
-    // Load required libraries if not already loaded
+    if (isLoading) {
+        handleError('PDF generation already in progress');
+        return;
+    }
+
     function loadScript(url) {
         return new Promise((resolve, reject) => {
-            if (document.querySelector(`script[src="${url}"]`)) {
-                resolve();
-                return;
-            }
             const script = document.createElement('script');
             script.src = url;
             script.onload = resolve;
-            script.onerror = reject;
+            script.onerror = () => reject(new Error(`Failed to load ${url}`));
             document.head.appendChild(script);
         });
     }
 
-    // Load both required libraries
-    Promise.all([
-        loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js'),
-        loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js')
-    ]).then(initPDF).catch(err => alert('Error loading required libraries: ' + err.message));
+    async function loadDependencies() {
+        isLoading = true;
+        try {
+            if (typeof html2canvas === 'undefined') {
+                await loadScript(HTML2CANVAS_URL);
+            }
+            if (typeof jspdf === 'undefined') {
+                await loadScript(JSPDF_URL);
+            }
+            isLoading = false;
+            await initPDF();
+        } catch (error) {
+            isLoading = false;
+            handleError('Failed to load required libraries', error);
+        }
+    }
 
-    function initPDF() {
-        // Get main container
-        const mainContainer = document.querySelector("div.flex-1.flex.flex-col.gap-3.px-4");
+    async function initPDF() {
+        const mainContainer = document.querySelector(SELECTORS.MAIN_CONTAINER);
         if (!mainContainer) {
-            alert('Could not find Claude chat container');
-            return;
+            throw new Error('Could not find Claude chat container');
         }
 
-        // Add stylesheet for proper list formatting and improved text rendering
         const styleSheet = document.createElement("style");
         styleSheet.textContent = `
-            .pdf-container {
-                -webkit-font-smoothing: antialiased;
-                -moz-osx-font-smoothing: grayscale;
-                text-rendering: optimizeLegibility;
+            .screenshot-container {
+                background-color: white !important;
+                color: black !important;
+                font-family: Arial, sans-serif !important;
+                line-height: 1.6 !important;
             }
-            .pdf-container ol {
+            .screenshot-container ol {
                 list-style-type: decimal !important;
                 padding-left: 2.5em !important;
                 margin-left: 0.5em !important;
                 margin-top: 1em !important;
                 margin-bottom: 1em !important;
             }
-            .pdf-container ol li {
+            .screenshot-container ol li {
                 padding-left: 0.5em !important;
                 margin-bottom: 0.5em !important;
             }
-            .pdf-container ul {
+            .screenshot-container ul {
                 list-style-type: disc !important;
                 padding-left: 2.5em !important;
                 margin-left: 0.5em !important;
                 margin-top: 1em !important;
                 margin-bottom: 1em !important;
             }
-            .pdf-container ul li {
+            .screenshot-container ul li {
                 padding-left: 0.5em !important;
                 margin-bottom: 0.5em !important;
             }
-            .pdf-container img {
+            .screenshot-container img {
                 display: inline-block;
-                image-rendering: -webkit-optimize-contrast;
-                image-rendering: crisp-edges;
+                max-width: 100%;
+                height: auto;
             }
-            .pdf-container pre, .pdf-container code {
+            .screenshot-container pre,
+            .screenshot-container code {
                 font-family: 'Courier New', Courier, monospace !important;
-                font-smooth: never;
-                -webkit-font-smoothing: none;
+                background-color: #f5f5f5 !important;
+                padding: 0.5em !important;
+                border-radius: 4px !important;
+                margin: 1em 0 !important;
             }
             body > div:last-child img {
                 display: inline-block;
+                max-width: 100%;
+                height: auto;
+            }
+            .chat-title-container {
+                margin-bottom: 1.5rem;
+                margin-top: 1.5rem;
+                border-bottom: 2px solid #eee;
+                padding-bottom: 1rem;
+            }
+            .chat-title-text {
+                font-size: 24px;
+                margin-bottom: 8px;
+                font-weight: bold;
+            }
+            .chat-timestamp {
+                font-size: 14px;
+                opacity: 0.7;
             }
         `;
         document.head.appendChild(styleSheet);
+        cleanup.styleSheet = styleSheet;
 
-        // Add container class for styling
-        mainContainer.classList.add('pdf-container');
+        mainContainer.classList.add('screenshot-container');
+        cleanup.containerClass = true;
 
-        // Setup styles for user messages
-        document.querySelectorAll("div.font-user-message").forEach(msg => {
-            msg.style.position = "relative";
-        });
-
-        // Get title and create filename
-        const title = document.querySelector("button[data-testid='chat-menu-trigger']")?.textContent || '';
+        const titleElement = document.querySelector(SELECTORS.CHAT_TITLE);
+        const title = titleElement?.textContent || 'Claude Chat';
         const filename = title.trim()
             .toLowerCase()
             .replace(/^[^\w\d]+|[^\w\d]+$/g, "")
             .replace(/[\s\W-]+/g, "-") || "claude";
 
-        // Create header with title and timestamp
-        const header = document.createElement("div");
-        header.style.cssText = `
-            position: absolute;
-            left: 0;
-            right: 0;
-            top: 8px;
-            text-align: center;
-            margin-bottom: 2em;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-        `;
-
-        const headerTitle = document.createElement("h1");
-        headerTitle.textContent = title;
-        headerTitle.style.fontSize = "18px";
-        headerTitle.style.fontWeight = "600";
-
-        const timestamp = document.createElement("p");
+        // Create title container with proper structure
+        const titleContainer = document.createElement("div");
+        const titleInnerContainer = document.createElement("div");
+        titleInnerContainer.className = "mb-1 mt-1";
+        
+        const titleText = document.createElement("div");
+        titleText.className = "chat-title-text";
+        titleText.textContent = title;
+        
+        const timestamp = document.createElement("div");
+        timestamp.className = "chat-timestamp";
         timestamp.textContent = new Date().toLocaleString();
-        timestamp.style.cssText = "font-size: 12px; opacity: 0.7;";
+        
+        titleInnerContainer.appendChild(titleText);
+        titleInnerContainer.appendChild(timestamp);
+        titleContainer.appendChild(titleInnerContainer);
+        
+        // Insert title container as first child
+        mainContainer.insertBefore(titleContainer, mainContainer.firstChild);
+        cleanup.header = titleContainer;
 
-        header.appendChild(headerTitle);
-        header.appendChild(timestamp);
-        mainContainer.prepend(header);
+        try {
+            showNotification('Generating high-quality PDF...');
+            
+            const canvas = await html2canvas(mainContainer, {
+                logging: false,
+                letterRendering: true,
+                foreignObjectRendering: false,
+                useCORS: true,
+                scale: QUALITY_SETTINGS.SCALE * (window.devicePixelRatio || 1),
+                allowTaint: false,
+                backgroundColor: '#ffffff',
+                imageTimeout: 0,
+                onclone: (clonedDoc) => {
+                    const clonedContainer = clonedDoc.querySelector('.screenshot-container');
+                    if (clonedContainer) {
+                        clonedContainer.style.padding = '40px';
+                        // Ensure all text is rendered crisply
+                        clonedContainer.style.webkitFontSmoothing = 'antialiased';
+                        clonedContainer.style.mozOsxFontSmoothing = 'grayscale';
+                    }
+                }
+            });
 
-        // Calculate optimal scale factor based on screen DPI
-        const scaleFactor = Math.max(2, window.devicePixelRatio || 1);
-
-        // Generate high-quality canvas
-        html2canvas(mainContainer, {
-            logging: false,
-            letterRendering: true,
-            foreignObjectRendering: false,
-            useCORS: true,
-            scale: scaleFactor,
-            scrollY: -window.scrollY,
-            windowWidth: document.documentElement.offsetWidth,
-            windowHeight: document.documentElement.offsetHeight,
-            onclone: (clonedDoc) => {
-                const container = clonedDoc.querySelector('.pdf-container');
-                container.style.padding = '20px';
-                container.style.width = '100%';
-                // Ensure all code blocks and pre elements are properly rendered
-                container.querySelectorAll('pre, code').forEach(el => {
-                    el.style.fontFamily = 'Courier New, Courier, monospace';
-                    el.style.fontSize = '14px';
-                    el.style.lineHeight = '1.4';
-                });
-            }
-        })
-        .then(canvas => {
-            // Create PDF with higher quality settings
+            // Create PDF with jsPDF
             const { jsPDF } = window.jspdf;
             const pdf = new jsPDF({
-                orientation: 'p',
+                orientation: 'portrait',
                 unit: 'px',
-                format: [canvas.width / scaleFactor, canvas.height / scaleFactor],
+                format: [canvas.width, canvas.height],
                 hotfixes: ['px_scaling'],
                 compress: true
             });
 
-            // Add the canvas as a high-quality image to the PDF
-            const imgData = canvas.toDataURL('image/jpeg', 1.0);
-            pdf.addImage(imgData, 'JPEG', 0, 0, canvas.width / scaleFactor, canvas.height / scaleFactor, undefined, 'FAST');
+            // Set PDF properties for better quality
+            pdf.setProperties({
+                title: title,
+                creator: 'Claude Chat Export',
+                subject: 'Chat Conversation',
+                keywords: 'claude, chat, conversation',
+                creationDate: new Date()
+            });
 
-            // Save the PDF with enhanced quality
-            pdf.save(`${filename}.pdf`);
-        })
-        .then(() => {
-            // Cleanup
-            styleSheet.remove();
-            header.remove();
-            mainContainer.classList.remove('pdf-container');
-        })
-        .catch(error => {
-            alert('Error generating PDF: ' + error.message);
-            // Cleanup on error
-            styleSheet?.remove();
-            header?.remove();
-            mainContainer.classList.remove('pdf-container');
-        });
+            // Add the canvas as an image to the PDF with high quality
+            pdf.addImage(
+                canvas.toDataURL('image/jpeg', QUALITY_SETTINGS.IMAGE_QUALITY),
+                'JPEG',
+                0,
+                0,
+                canvas.width,
+                canvas.height,
+                undefined,
+                'FAST',
+                0
+            );
+
+            // Save the PDF with improved compression
+            pdf.save(`${filename}-${Date.now()}.pdf`);
+
+            showNotification('High-quality PDF saved successfully');
+        } finally {
+            performCleanup();
+        }
     }
+
+    loadDependencies().catch(error => handleError('PDF generation failed', error));
 })();
