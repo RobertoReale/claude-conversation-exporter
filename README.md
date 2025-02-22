@@ -1,6 +1,6 @@
 # Claude Chat Exporter
 
-A set of bookmarklets to export your Claude.ai conversations as PDF or PNG files.
+A set of JavaScript bookmarklets to export your Claude.ai conversations as PDF or PNG files.
 
 ## Features
 
