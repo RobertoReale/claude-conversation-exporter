@@ -18,11 +18,6 @@ javascript:(function(){
         DPI: 300                // Higher DPI for better print quality
     };
     
-    // Define standard paper sizes in points (pt)
-    const PAPER_SIZES = {
-        A4: [595.28, 841.89]  // Width, Height in points (72 dpi) - kept here just for reference
-    };
-    
     // State tracking
     let isLoading = false;
     let cleanup = {
@@ -346,7 +341,7 @@ javascript:(function(){
             throw new Error('Unable to find the Claude chat container');
         }
 
-        // Apply styling
+        // Apply styling including additional Katex fixes
         const styleSheet = document.createElement("style");
         styleSheet.textContent = `
             .screenshot-container {
@@ -411,6 +406,20 @@ javascript:(function(){
                 font-size: 14px;
                 opacity: 0.7;
             }
+            /* Additional KaTeX fixes */
+            .screenshot-container .katex-display {
+                display: block !important;
+                text-align: center !important;
+                margin: 1em 0 !important;
+            }
+            .screenshot-container .katex {
+                display: inline-block !important;
+                white-space: nowrap !important;
+                text-indent: 0 !important;
+            }
+            .screenshot-container .katex * {
+                position: static !important;
+            }
         `;
         document.head.appendChild(styleSheet);
         cleanup.styleSheet = styleSheet;
@@ -456,8 +465,7 @@ javascript:(function(){
         }
     }
 
-    // IMPORTANT CHANGE:
-    // We remove the "pagination" system and create a single-page PDF instead
+    // Updated PDF generator with new html2canvas options
     async function generatePDF(container, filename) {
         showNotification('Generating high-quality PDF...');
         
@@ -466,10 +474,10 @@ javascript:(function(){
         const canvas = await html2canvas(container, {
             logging: false,
             letterRendering: true,
-            foreignObjectRendering: false,
+            foreignObjectRendering: true, // Enables better capture of complex elements like KaTeX
             useCORS: true,
             scale: QUALITY_SETTINGS.SCALE * (window.devicePixelRatio || 1),
-            allowTaint: true,
+            allowTaint: true, // As suggested, enable tainting
             backgroundColor: '#ffffff',
             onclone: (clonedDoc) => {
                 const clonedContainer = clonedDoc.querySelector('.screenshot-container');
@@ -482,20 +490,18 @@ javascript:(function(){
         
         showProgress(80, 'Creating PDF...');
         
-        // Calculate canvas dimensions
+        // Get canvas dimensions
         const canvasWidth = canvas.width;
         const canvasHeight = canvas.height;
-
-        // If you want to reduce the final PDF size a bit, apply a scale factor:
-        const scaleFactor = 0.75; // 75% of the actual size
+        
+        // Adjust scale factor as desired (here, 75% of the canvas size)
+        const scaleFactor = 0.75;
         const pdfWidth = canvasWidth * scaleFactor;
         const pdfHeight = canvasHeight * scaleFactor;
-
-        // Create a PDF matching the image dimensions
+        
         const { jsPDF } = window.jspdf;
         const pdf = new jsPDF('p', 'pt', [pdfWidth, pdfHeight]);
         
-        // Metadata
         pdf.setProperties({
             title: filename,
             creator: 'Claude Chat Export',
@@ -529,7 +535,7 @@ javascript:(function(){
         const canvas = await html2canvas(container, {
             logging: false,
             letterRendering: true,
-            foreignObjectRendering: false,
+            foreignObjectRendering: true,
             useCORS: true,
             scale: window.devicePixelRatio || 1,
             allowTaint: true,
@@ -542,11 +548,9 @@ javascript:(function(){
             }
         });
         
-        // Convert to data URL
         showProgress(90, 'Creating PNG image...');
         const dataUrl = canvas.toDataURL("image/png");
         
-        // Download the image
         showProgress(100, 'Saving PNG...');
         const downloadLink = document.createElement("a");
         downloadLink.download = `${filename}-${Date.now()}.png`;
