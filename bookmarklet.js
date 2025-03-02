@@ -13,9 +13,8 @@ javascript:(function(){
     
     // Quality settings
     const QUALITY_SETTINGS = {
-        SCALE: 2,               // Increased from 1 to 2 for better resolution
-        IMAGE_QUALITY: 1,       // Maximum image quality (0-1)
-        DPI: 300                // Higher DPI for better print quality
+        SCALE: 2,      // Increased for better resolution
+        DPI: 300       // Higher DPI for better print quality (not directly used here)
     };
     
     // State tracking
@@ -59,7 +58,6 @@ javascript:(function(){
 
     function showProgress(percent, message = 'Processing...') {
         if (!cleanup.progressBar) {
-            // Create progress container
             const progressContainer = document.createElement('div');
             progressContainer.style.cssText = `
                 position: fixed;
@@ -75,13 +73,11 @@ javascript:(function(){
                 min-width: 300px;
             `;
             
-            // Add message
             const messageElement = document.createElement('div');
             messageElement.style.marginBottom = '10px';
             messageElement.textContent = message;
             progressContainer.appendChild(messageElement);
             
-            // Add progress bar
             const progressBar = document.createElement('div');
             progressBar.style.cssText = `
                 width: 100%;
@@ -102,7 +98,6 @@ javascript:(function(){
             progressBar.appendChild(progressFill);
             progressContainer.appendChild(progressBar);
             
-            // Add percentage text
             const percentText = document.createElement('div');
             percentText.style.marginTop = '5px';
             percentText.textContent = '0%';
@@ -118,15 +113,12 @@ javascript:(function(){
             };
         }
         
-        // Update progress
         cleanup.progressBar.fill.style.width = `${percent}%`;
         cleanup.progressBar.text.textContent = `${Math.round(percent)}%`;
-        
         if (message !== cleanup.progressBar.message.textContent) {
             cleanup.progressBar.message.textContent = message;
         }
         
-        // Remove if completed
         if (percent >= 100) {
             setTimeout(() => {
                 if (cleanup.progressBar) {
@@ -156,7 +148,6 @@ javascript:(function(){
         if (cleanup.progressBar) {
             cleanup.progressBar.container.remove();
         }
-        
         cleanup = {
             styleSheet: null,
             header: null,
@@ -172,13 +163,11 @@ javascript:(function(){
         return;
     }
 
-    // Check if export is already in progress
     if (isLoading) {
         handleError('Export already in progress');
         return;
     }
 
-    // Load dependencies
     function loadScript(url) {
         return new Promise((resolve, reject) => {
             const script = document.createElement('script');
@@ -244,19 +233,15 @@ javascript:(function(){
                 font-weight: bold;
                 transition: background 0.2s;
             `;
-            
             button.addEventListener('mouseover', () => {
                 button.style.background = '#4C51BF';
             });
-            
             button.addEventListener('mouseout', () => {
                 button.style.background = '#5A67D8';
             });
-            
             button.addEventListener('click', async () => {
                 modal.remove();
                 cleanup.modal = null;
-                
                 try {
                     showProgress(0, `Initializing ${format.toUpperCase()} export...`);
                     await loadDependencies(format);
@@ -264,7 +249,6 @@ javascript:(function(){
                     handleError(`Error during export: ${error.message}`, error);
                 }
             });
-            
             return button;
         };
         
@@ -284,15 +268,12 @@ javascript:(function(){
             font-weight: bold;
             transition: background 0.2s;
         `;
-        
         cancelButton.addEventListener('mouseover', () => {
             cancelButton.style.background = '#CBD5E0';
         });
-        
         cancelButton.addEventListener('mouseout', () => {
             cancelButton.style.background = '#E2E8F0';
         });
-        
         cancelButton.addEventListener('click', () => {
             modal.remove();
             cleanup.modal = null;
@@ -314,18 +295,14 @@ javascript:(function(){
     async function loadDependencies(format) {
         isLoading = true;
         try {
-            // Always load html2canvas
             if (typeof html2canvas === 'undefined') {
                 showProgress(10, 'Loading html2canvas...');
                 await loadScript(DEPENDENCIES.HTML2CANVAS_URL);
             }
-            
-            // Only load jsPDF for PDF format
             if (format === 'pdf' && typeof jspdf === 'undefined') {
                 showProgress(30, 'Loading jsPDF...');
                 await loadScript(DEPENDENCIES.JSPDF_URL);
             }
-            
             showProgress(50, 'Preparing content...');
             isLoading = false;
             await initExport(format);
@@ -341,7 +318,6 @@ javascript:(function(){
             throw new Error('Unable to find the Claude chat container');
         }
 
-        // Apply styling including additional Katex fixes
         const styleSheet = document.createElement("style");
         styleSheet.textContent = `
             .screenshot-container {
@@ -406,20 +382,6 @@ javascript:(function(){
                 font-size: 14px;
                 opacity: 0.7;
             }
-            /* Additional KaTeX fixes */
-            .screenshot-container .katex-display {
-                display: block !important;
-                text-align: center !important;
-                margin: 1em 0 !important;
-            }
-            .screenshot-container .katex {
-                display: inline-block !important;
-                white-space: nowrap !important;
-                text-indent: 0 !important;
-            }
-            .screenshot-container .katex * {
-                position: static !important;
-            }
         `;
         document.head.appendChild(styleSheet);
         cleanup.styleSheet = styleSheet;
@@ -427,7 +389,6 @@ javascript:(function(){
         mainContainer.classList.add('screenshot-container');
         cleanup.containerClass = true;
 
-        // Get title information
         const titleElement = document.querySelector(SELECTORS.CHAT_TITLE);
         const title = titleElement?.textContent || 'Claude Chat';
         const filename = title.trim()
@@ -435,7 +396,6 @@ javascript:(function(){
             .replace(/^[^\w\d]+|[^\w\d]+$/g, "")
             .replace(/[\s\W-]+/g, "-") || "claude";
 
-        // Create title container
         const titleContainer = document.createElement("div");
         titleContainer.className = "chat-title-container";
         
@@ -449,8 +409,6 @@ javascript:(function(){
         
         titleContainer.appendChild(titleText);
         titleContainer.appendChild(timestamp);
-        
-        // Insert title container as first child
         mainContainer.insertBefore(titleContainer, mainContainer.firstChild);
         cleanup.header = titleContainer;
 
@@ -465,19 +423,18 @@ javascript:(function(){
         }
     }
 
-    // Updated PDF generator with new html2canvas options
+    // New generatePDF function that splits the high-quality canvas into multiple PDF pages if needed.
     async function generatePDF(container, filename) {
         showNotification('Generating high-quality PDF...');
-        
         showProgress(60, 'Rendering content...');
         
         const canvas = await html2canvas(container, {
             logging: false,
             letterRendering: true,
-            foreignObjectRendering: true, // Enables better capture of complex elements like KaTeX
+            foreignObjectRendering: false,
             useCORS: true,
             scale: QUALITY_SETTINGS.SCALE * (window.devicePixelRatio || 1),
-            allowTaint: true, // As suggested, enable tainting
+            allowTaint: true,
             backgroundColor: '#ffffff',
             onclone: (clonedDoc) => {
                 const clonedContainer = clonedDoc.querySelector('.screenshot-container');
@@ -489,53 +446,46 @@ javascript:(function(){
         });
         
         showProgress(80, 'Creating PDF...');
-        
-        // Get canvas dimensions
-        const canvasWidth = canvas.width;
-        const canvasHeight = canvas.height;
-        
-        // Adjust scale factor as desired (here, 75% of the canvas size)
-        const scaleFactor = 0.75;
-        const pdfWidth = canvasWidth * scaleFactor;
-        const pdfHeight = canvasHeight * scaleFactor;
-        
+        const imgData = canvas.toDataURL('image/png');
         const { jsPDF } = window.jspdf;
-        const pdf = new jsPDF('p', 'pt', [pdfWidth, pdfHeight]);
+        // Create an A4 PDF in portrait
+        const pdf = new jsPDF('p', 'pt', 'a4');
+        const pageWidth = pdf.internal.pageSize.getWidth();
+        const pageHeight = pdf.internal.pageSize.getHeight();
         
-        pdf.setProperties({
-            title: filename,
-            creator: 'Claude Chat Export',
-            subject: 'Chat Conversation',
-            keywords: 'claude, chat, conversation',
-            creationDate: new Date()
-        });
+        // Scale the image to fit the PDF width while maintaining aspect ratio
+        const imgWidth = pageWidth;
+        const imgHeight = canvas.height * imgWidth / canvas.width;
         
-        pdf.addImage(
-            canvas.toDataURL('image/jpeg', QUALITY_SETTINGS.IMAGE_QUALITY),
-            'JPEG',
-            0,
-            0,
-            pdfWidth,
-            pdfHeight,
-            undefined,
-            'FAST'
-        );
+        // How many pages will be needed
+        let heightLeft = imgHeight;
+        let position = 0;
+        
+        // Add first page
+        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+        heightLeft -= pageHeight;
+        
+        // Add remaining pages if the image height exceeds one page
+        while (heightLeft > 0) {
+            position = heightLeft - imgHeight;
+            pdf.addPage();
+            pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+            heightLeft -= pageHeight;
+        }
         
         showProgress(100, 'Saving PDF...');
         pdf.save(`${filename}-${Date.now()}.pdf`);
-        
-        showNotification('High-quality PDF saved successfully (single page)');
+        showNotification('High-quality multi-page PDF saved successfully');
     }
 
     async function generatePNG(container, filename) {
         showNotification('Generating PNG...');
-        
         showProgress(60, 'Rendering content...');
         
         const canvas = await html2canvas(container, {
             logging: false,
             letterRendering: true,
-            foreignObjectRendering: true,
+            foreignObjectRendering: false,
             useCORS: true,
             scale: window.devicePixelRatio || 1,
             allowTaint: true,
@@ -560,6 +510,5 @@ javascript:(function(){
         showNotification('Screenshot saved successfully');
     }
 
-    // Start the process by showing the format selection modal
     showFormatSelectionModal();
 })();
