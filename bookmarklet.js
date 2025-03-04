@@ -3,20 +3,17 @@ javascript:(function(){
     const SELECTORS = {
         MAIN_CONTAINER: "div.flex-1.flex.flex-col.gap-3.px-4.max-w-3xl.mx-auto.w-full.pt-1",
         CHAT_TITLE: "button[data-testid='chat-menu-trigger']",
-        USER_MESSAGES: "div.font-user-message"
+        USER_MESSAGES: "div.font-user-message",
+        CLAUDE_MESSAGES: "div[data-testid='chat-message-content']",
+        CODE_BLOCKS: "pre",
+        INLINE_CODE: "code"
     };
     
     const DEPENDENCIES = {
         HTML2CANVAS_URL: 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js',
         JSPDF_URL: 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js'
     };
-    
-    // Quality settings
-    const QUALITY_SETTINGS = {
-        SCALE: 2,      // Increased for better resolution
-        DPI: 300       // Higher DPI for better print quality (not directly used here)
-    };
-    
+        
     // State tracking
     let isLoading = false;
     let cleanup = {
@@ -318,15 +315,129 @@ javascript:(function(){
             throw new Error('Unable to find the Claude chat container');
         }
 
+        // Extract computed styles from the DOM
+        const userMessages = document.querySelectorAll(SELECTORS.USER_MESSAGES);
+        const claudeMessages = document.querySelectorAll(SELECTORS.CLAUDE_MESSAGES);
+        const codeBlocks = document.querySelectorAll(SELECTORS.CODE_BLOCKS);
+        const inlineCodes = document.querySelectorAll(SELECTORS.INLINE_CODE);
+        
+        // Get computed styles for better replication
+        let userMessageStyle = {};
+        let claudeMessageStyle = {};
+        let codeBlockStyle = {};
+        let inlineCodeStyle = {};
+        
+        if (userMessages.length > 0) {
+            const computedStyle = window.getComputedStyle(userMessages[0]);
+            userMessageStyle = {
+                fontFamily: computedStyle.fontFamily,
+                fontSize: computedStyle.fontSize,
+                lineHeight: computedStyle.lineHeight,
+                color: computedStyle.color,
+                backgroundColor: computedStyle.backgroundColor
+            };
+        }
+        
+        if (claudeMessages.length > 0) {
+            const computedStyle = window.getComputedStyle(claudeMessages[0]);
+            claudeMessageStyle = {
+                fontFamily: computedStyle.fontFamily,
+                fontSize: computedStyle.fontSize,
+                lineHeight: computedStyle.lineHeight,
+                color: computedStyle.color,
+                backgroundColor: computedStyle.backgroundColor,
+                letterSpacing: computedStyle.letterSpacing
+            };
+        }
+        
+        if (codeBlocks.length > 0) {
+            const computedStyle = window.getComputedStyle(codeBlocks[0]);
+            codeBlockStyle = {
+                fontFamily: computedStyle.fontFamily,
+                fontSize: computedStyle.fontSize,
+                lineHeight: computedStyle.lineHeight,
+                color: computedStyle.color,
+                backgroundColor: computedStyle.backgroundColor,
+                padding: computedStyle.padding,
+                borderRadius: computedStyle.borderRadius,
+                tabSize: computedStyle.tabSize
+            };
+        }
+        
+        if (inlineCodes.length > 0) {
+            const computedStyle = window.getComputedStyle(inlineCodes[0]);
+            inlineCodeStyle = {
+                fontFamily: computedStyle.fontFamily,
+                fontSize: computedStyle.fontSize,
+                backgroundColor: computedStyle.backgroundColor,
+                padding: computedStyle.padding,
+                borderRadius: computedStyle.borderRadius
+            };
+        }
+
         const styleSheet = document.createElement("style");
         styleSheet.textContent = `
             .screenshot-container {
                 background-color: white !important;
                 color: black !important;
-                font-family: Arial, sans-serif !important;
-                line-height: 1.6 !important;
                 padding: 20px !important;
             }
+            
+            /* User messages style */
+            .screenshot-container .font-user-message {
+                font-family: ${userMessageStyle.fontFamily || 'var(--font-sans-serif), Arial, sans-serif'} !important;
+                font-size: ${userMessageStyle.fontSize || '1rem'} !important;
+                line-height: ${userMessageStyle.lineHeight || '1.6'} !important;
+                color: ${userMessageStyle.color || 'hsl(var(--text-100))'} !important;
+                margin-bottom: 1.5rem !important;
+                padding: 0.75rem !important;
+                background-color: ${userMessageStyle.backgroundColor || 'hsl(var(--bg-100))'} !important;
+                border-radius: 0.5rem !important;
+            }
+            
+            /* Claude messages style */
+            .screenshot-container [data-testid="chat-message-content"] {
+                font-family: ${claudeMessageStyle.fontFamily || 'var(--font-serif), Georgia, serif'} !important;
+                font-size: ${claudeMessageStyle.fontSize || '1rem'} !important;
+                line-height: ${claudeMessageStyle.lineHeight || '1.65'} !important;
+                color: ${claudeMessageStyle.color || 'hsl(var(--text-100))'} !important;
+                letter-spacing: ${claudeMessageStyle.letterSpacing || '-0.015em'} !important;
+                margin-bottom: 1.5rem !important;
+                padding: 0.75rem !important;
+            }
+            
+            /* Code block style */
+            .screenshot-container pre {
+                font-family: ${codeBlockStyle.fontFamily || "'Fira Code', 'Fira Mono', Menlo, Consolas, 'DejaVu Sans Mono', monospace"} !important;
+                font-size: ${codeBlockStyle.fontSize || '0.875rem'} !important;
+                line-height: ${codeBlockStyle.lineHeight || '1.625'} !important;
+                color: ${codeBlockStyle.color || '#abb2bf'} !important;
+                background-color: ${codeBlockStyle.backgroundColor || '#282c34'} !important;
+                padding: ${codeBlockStyle.padding || '1em'} !important;
+                border-radius: ${codeBlockStyle.borderRadius || '0.5rem'} !important;
+                tab-size: ${codeBlockStyle.tabSize || '2'} !important;
+                overflow-x: auto !important;
+                margin: 1em 0 !important;
+                text-shadow: 0 1px rgba(0,0,0,.3) !important;
+                white-space: pre !important;
+                word-spacing: normal !important;
+                word-break: normal !important;
+            }
+            
+            /* Inline code style */
+            .screenshot-container code:not(pre code) {
+                font-family: ${inlineCodeStyle.fontFamily || "'Fira Code', 'Fira Mono', Menlo, Consolas, 'DejaVu Sans Mono', monospace"} !important;
+                font-size: 0.9rem !important;
+                background-color: rgba(0, 0, 0, 0.05) !important;
+                color: hsl(var(--danger-000)) !important;
+                padding: 0px 4px !important;
+                margin: 0 2px !important;
+                border: 0.5px solid hsl(var(--border-300)) !important;
+                border-radius: 0.3rem !important;
+                white-space: pre-wrap !important;
+            }
+            
+            /* List styles */
             .screenshot-container ol {
                 list-style-type: decimal !important;
                 padding-left: 2.5em !important;
@@ -334,10 +445,12 @@ javascript:(function(){
                 margin-top: 1em !important;
                 margin-bottom: 1em !important;
             }
+            
             .screenshot-container ol li {
                 padding-left: 0.5em !important;
                 margin-bottom: 0.5em !important;
             }
+            
             .screenshot-container ul {
                 list-style-type: disc !important;
                 padding-left: 2.5em !important;
@@ -345,42 +458,89 @@ javascript:(function(){
                 margin-top: 1em !important;
                 margin-bottom: 1em !important;
             }
+            
             .screenshot-container ul li {
                 padding-left: 0.5em !important;
                 margin-bottom: 0.5em !important;
             }
+            
+            /* Image styles */
             .screenshot-container img {
                 display: inline-block;
                 max-width: 100%;
                 height: auto;
             }
-            .screenshot-container pre,
-            .screenshot-container code {
-                font-family: 'Courier New', Courier, monospace !important;
-                background-color: #f5f5f5 !important;
-                padding: 0.5em !important;
-                border-radius: 4px !important;
-                margin: 1em 0 !important;
+            
+            /* Message container styles */
+            .screenshot-container .message-container {
+                margin-bottom: 1.5rem !important;
+                border-radius: 0.5rem !important;
+                overflow: hidden !important;
             }
-            body > div:last-child img {
-                display: inline-block;
-                max-width: 100%;
-                height: auto;
+            
+            /* Artifact styles */
+            .screenshot-container [data-testid="artifact-card"] {
+                border: 1px solid hsla(var(--border-100), 0.3) !important;
+                border-radius: 0.5rem !important;
+                margin: 1rem 0 !important;
+                overflow: hidden !important;
             }
+            
+            /* Chat header */
             .chat-title-container {
                 margin-bottom: 1.5rem;
                 margin-top: 1.5rem;
                 border-bottom: 2px solid #eee;
                 padding-bottom: 1rem;
             }
+            
             .chat-title-text {
                 font-size: 24px;
                 margin-bottom: 8px;
                 font-weight: bold;
             }
+            
             .chat-timestamp {
                 font-size: 14px;
                 opacity: 0.7;
+            }
+            
+            /* Message roles */
+            .message-role {
+                font-weight: bold;
+                margin-bottom: 0.5rem;
+                font-size: 0.875rem;
+                color: hsl(var(--text-200));
+            }
+            
+            /* Math and latex */
+            .screenshot-container .katex {
+                font-size: 1.1em !important;
+            }
+            
+            /* Tables */
+            .screenshot-container table {
+                border-collapse: collapse !important;
+                width: 100% !important;
+                margin: 1rem 0 !important;
+            }
+            
+            .screenshot-container th {
+                background-color: hsl(var(--bg-300)) !important;
+                color: hsl(var(--text-000)) !important;
+                font-weight: bold !important;
+                text-align: left !important;
+                padding: 0.75rem !important;
+                border: 1px solid hsl(var(--border-200)) !important;
+            }
+            
+            .screenshot-container td {
+                padding: 0.75rem !important;
+                border: 1px solid hsl(var(--border-200)) !important;
+            }
+            
+            .screenshot-container tr:nth-child(even) {
+                background-color: hsl(var(--bg-100)) !important;
             }
         `;
         document.head.appendChild(styleSheet);
@@ -388,6 +548,20 @@ javascript:(function(){
 
         mainContainer.classList.add('screenshot-container');
         cleanup.containerClass = true;
+
+        // Add message role labels to better distinguish between user and assistant
+        const messages = mainContainer.querySelectorAll('[data-testid="chat-message"]');
+        messages.forEach(message => {
+            const isUser = message.querySelector('.font-user-message');
+            const content = message.querySelector('[data-testid="chat-message-content"]');
+            
+            if (content && !content.querySelector('.message-role')) {
+                const roleLabel = document.createElement('div');
+                roleLabel.className = 'message-role';
+                roleLabel.textContent = isUser ? 'You:' : 'Claude:';
+                content.insertBefore(roleLabel, content.firstChild);
+            }
+        });
 
         const titleElement = document.querySelector(SELECTORS.CHAT_TITLE);
         const title = titleElement?.textContent || 'Claude Chat';
@@ -423,91 +597,203 @@ javascript:(function(){
         }
     }
 
-    // New generatePDF function that splits the high-quality canvas into multiple PDF pages if needed.
     async function generatePDF(container, filename) {
-        showNotification('Generating high-quality PDF...');
+        showNotification('Generating optimized PDF...');
         showProgress(60, 'Rendering content...');
         
-        const canvas = await html2canvas(container, {
-            logging: false,
-            letterRendering: true,
-            foreignObjectRendering: false,
-            useCORS: true,
-            scale: QUALITY_SETTINGS.SCALE * (window.devicePixelRatio || 1),
-            allowTaint: true,
-            backgroundColor: '#ffffff',
-            onclone: (clonedDoc) => {
-                const clonedContainer = clonedDoc.querySelector('.screenshot-container');
-                if (clonedContainer) {
-                    clonedContainer.style.webkitFontSmoothing = 'antialiased';
-                    clonedContainer.style.mozOsxFontSmoothing = 'grayscale';
+        // Create clone of container for better rendering
+        const clone = container.cloneNode(true);
+        clone.style.width = '800px'; // Fixed width for better PDF layout
+        clone.style.margin = '0 auto';
+        
+        // Apply any post-processing on the clone
+        processCodeFormatting(clone);
+        
+        // Move clone offscreen temporarily for capturing
+        clone.style.position = 'absolute';
+        clone.style.left = '-9999px';
+        document.body.appendChild(clone);
+        
+        try {
+            // Use a more moderate scale factor for better file size
+            const scaleFactor = Math.min(1.5, window.devicePixelRatio || 1);
+            
+            const canvas = await html2canvas(clone, {
+                logging: false,
+                letterRendering: true,
+                foreignObjectRendering: false,
+                useCORS: true,
+                scale: scaleFactor,
+                allowTaint: true,
+                backgroundColor: '#ffffff',
+                onclone: (clonedDoc) => {
+                    const clonedContainer = clonedDoc.querySelector('.screenshot-container');
+                    if (clonedContainer) {
+                        clonedContainer.style.webkitFontSmoothing = 'antialiased';
+                        clonedContainer.style.mozOsxFontSmoothing = 'grayscale';
+                    }
                 }
+            });
+            
+            showProgress(80, 'Creating PDF...');
+            
+            // Use a high quality JPEG for better image quality
+            const imgData = canvas.toDataURL('image/jpeg', 1.0);
+            
+            const { jsPDF } = window.jspdf;
+            
+            // Add PDF compression options
+            const pdfOptions = {
+                compress: true,
+                precision: 2,  // Reduce precision for better compression
+            };
+            
+            // Create an A4 PDF in portrait with compression options
+            const pdf = new jsPDF(pdfOptions);
+            
+            const pageWidth = pdf.internal.pageSize.getWidth();
+            const pageHeight = pdf.internal.pageSize.getHeight();
+            
+            // Scale the image to fit the PDF width while maintaining aspect ratio
+            const imgWidth = pageWidth;
+            const imgHeight = canvas.height * imgWidth / canvas.width;
+            
+            // Calculate the number of pages needed
+            const totalPages = Math.ceil(imgHeight / pageHeight);
+            
+            // Add page splitting notification if multiple pages
+            if (totalPages > 1) {
+                showProgress(85, `Creating ${totalPages} page PDF...`);
             }
-        });
-        
-        showProgress(80, 'Creating PDF...');
-        const imgData = canvas.toDataURL('image/png');
-        const { jsPDF } = window.jspdf;
-        // Create an A4 PDF in portrait
-        const pdf = new jsPDF('p', 'pt', 'a4');
-        const pageWidth = pdf.internal.pageSize.getWidth();
-        const pageHeight = pdf.internal.pageSize.getHeight();
-        
-        // Scale the image to fit the PDF width while maintaining aspect ratio
-        const imgWidth = pageWidth;
-        const imgHeight = canvas.height * imgWidth / canvas.width;
-        
-        // How many pages will be needed
-        let heightLeft = imgHeight;
-        let position = 0;
-        
-        // Add first page
-        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-        heightLeft -= pageHeight;
-        
-        // Add remaining pages if the image height exceeds one page
-        while (heightLeft > 0) {
-            position = heightLeft - imgHeight;
-            pdf.addPage();
-            pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-            heightLeft -= pageHeight;
+            
+            // Add first page
+            pdf.addImage(imgData, 'JPEG', 0, 0, imgWidth, imgHeight);
+            let heightLeft = imgHeight - pageHeight;
+            
+            // Add remaining pages if needed
+            let pageNum = 1;
+            while (heightLeft > 0) {
+                pageNum++;
+                showProgress(85 + (pageNum / totalPages) * 10, `Adding page ${pageNum}/${totalPages}...`);
+                
+                pdf.addPage();
+                pdf.addImage(imgData, 'JPEG', 0, -(pageHeight * (pageNum-1)), imgWidth, imgHeight);
+                heightLeft -= pageHeight;
+            }
+            
+            showProgress(95, 'Optimizing PDF...');
+            
+            // Set PDF metadata for better organization
+            pdf.setProperties({
+                title: `Claude Chat: ${filename}`,
+                subject: 'Chat conversation with Claude',
+                creator: 'Claude Chat Exporter',
+                author: 'Claude User',
+                keywords: 'claude, chat, conversation',
+                creationDate: new Date()
+            });
+            
+            showProgress(100, 'Saving PDF...');
+            pdf.save(`${filename}-${Date.now()}.pdf`);
+            showNotification('Optimized PDF saved successfully');
+        } finally {
+            // Clean up the clone
+            if (clone && clone.parentNode) {
+                clone.parentNode.removeChild(clone);
+            }
         }
-        
-        showProgress(100, 'Saving PDF...');
-        pdf.save(`${filename}-${Date.now()}.pdf`);
-        showNotification('High-quality multi-page PDF saved successfully');
     }
 
     async function generatePNG(container, filename) {
         showNotification('Generating PNG...');
         showProgress(60, 'Rendering content...');
         
-        const canvas = await html2canvas(container, {
-            logging: false,
-            letterRendering: true,
-            foreignObjectRendering: false,
-            useCORS: true,
-            scale: window.devicePixelRatio || 1,
-            allowTaint: true,
-            backgroundColor: '#ffffff',
-            onclone: (clonedDoc) => {
-                const clonedContainer = clonedDoc.querySelector('.screenshot-container');
-                if (clonedContainer) {
-                    clonedContainer.style.padding = '20px';
+        // Create clone of container for better rendering
+        const clone = container.cloneNode(true);
+        clone.style.width = '800px'; // Fixed width for better PNG layout
+        clone.style.margin = '0 auto';
+        
+        // Apply any post-processing on the clone
+        processCodeFormatting(clone);
+        
+        // Move clone offscreen temporarily for capturing
+        clone.style.position = 'absolute';
+        clone.style.left = '-9999px';
+        document.body.appendChild(clone);
+        
+        try {
+            const canvas = await html2canvas(clone, {
+                logging: false,
+                letterRendering: true,
+                foreignObjectRendering: false,
+                useCORS: true,
+                scale: window.devicePixelRatio * 2 || 2, // Higher scale for better quality
+                allowTaint: true,
+                backgroundColor: '#ffffff',
+                onclone: (clonedDoc) => {
+                    const clonedContainer = clonedDoc.querySelector('.screenshot-container');
+                    if (clonedContainer) {
+                        clonedContainer.style.padding = '20px';
+                    }
+                }
+            });
+            
+            showProgress(90, 'Creating PNG image...');
+            const dataUrl = canvas.toDataURL("image/png");
+            
+            showProgress(100, 'Saving PNG...');
+            const downloadLink = document.createElement("a");
+            downloadLink.download = `${filename}-${Date.now()}.png`;
+            downloadLink.href = dataUrl;
+            downloadLink.click();
+            
+            showNotification('Screenshot saved successfully');
+        } finally {
+            // Clean up the clone
+            if (clone && clone.parentNode) {
+                clone.parentNode.removeChild(clone);
+            }
+        }
+    }
+    
+    // Helper function to process and optimize code formatting
+    function processCodeFormatting(container) {
+        // Ensure syntax highlighting is preserved
+        const codeBlocks = container.querySelectorAll('pre');
+        codeBlocks.forEach(block => {
+            // Add explicit syntax highlighting class if needed
+            if (!block.classList.contains('language-')) {
+                const codeElement = block.querySelector('code');
+                if (codeElement && codeElement.className) {
+                    const match = codeElement.className.match(/language-(\w+)/);
+                    if (match) {
+                        block.classList.add(`language-${match[1]}`);
+                    } else {
+                        block.classList.add('language-plaintext');
+                    }
+                } else {
+                    block.classList.add('language-plaintext');
                 }
             }
+            
+            // Ensure background color is applied
+            block.style.backgroundColor = '#282c34';
+            block.style.color = '#abb2bf';
         });
         
-        showProgress(90, 'Creating PNG image...');
-        const dataUrl = canvas.toDataURL("image/png");
-        
-        showProgress(100, 'Saving PNG...');
-        const downloadLink = document.createElement("a");
-        downloadLink.download = `${filename}-${Date.now()}.png`;
-        downloadLink.href = dataUrl;
-        downloadLink.click();
-        
-        showNotification('Screenshot saved successfully');
+        // Process inline code elements
+        const inlineCodes = container.querySelectorAll('code:not(pre code)');
+        inlineCodes.forEach(code => {
+            code.style.backgroundColor = 'rgba(0, 0, 0, 0.05)';
+            code.style.color = 'var(--danger-000, #8B0000)';
+            code.style.padding = '0px 4px';
+            code.style.margin = '0 2px';
+            code.style.border = '0.5px solid var(--border-300, #DDD)';
+            code.style.borderRadius = '0.3rem';
+            code.style.fontSize = '0.9rem';
+            code.style.fontFamily = "'Fira Code', 'Fira Mono', Menlo, Consolas, 'DejaVu Sans Mono', monospace";
+            code.style.whiteSpace = 'pre-wrap';
+        });
     }
 
     showFormatSelectionModal();
