@@ -15,7 +15,7 @@ A browser bookmarklet that allows you to easily export your Claude.ai conversati
 
 1. Create a new bookmark in your browser
 2. Name it "Export Claude Chat" (or any name you prefer)
-3. Copy the entire JavaScript code from the [bookmarklet.js](bookmarklet.js) file
+3. Copy the entire JavaScript code from the [bookmarklet._minified.js](bookmarklet._minified.js) file
 4. Paste it as the bookmark URL (it should start with `javascript:`)
 
 ## Usage
