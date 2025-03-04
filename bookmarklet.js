@@ -383,15 +383,29 @@ javascript:(function(){
                 padding: 20px !important;
             }
             
-            /* User messages style */
+            /* User messages style - FIX PADDING HERE */
             .screenshot-container .font-user-message {
                 font-family: ${userMessageStyle.fontFamily || 'var(--font-sans-serif), Arial, sans-serif'} !important;
                 font-size: ${userMessageStyle.fontSize || '1rem'} !important;
                 line-height: ${userMessageStyle.lineHeight || '1.6'} !important;
                 color: ${userMessageStyle.color || 'hsl(var(--text-100))'} !important;
-                margin-bottom: 1.5rem !important;
+                margin-bottom: 0 !important;
+                padding: 0.5px !important;
+                background-color: ${userMessageStyle.backgroundColor || 'transparent'} !important;
+                border-radius: 0.25rem !important;
+            }
+            
+            /* User message container */
+            .screenshot-container [data-testid="user-message"] {
+                padding: 0 !important;
+                margin: 0 !important;
+            }
+            
+            /* Fix user message parent container */
+            .screenshot-container .group {
                 padding: 0.75rem !important;
-                background-color: ${userMessageStyle.backgroundColor || 'hsl(var(--bg-100))'} !important;
+                margin-bottom: 1rem !important;
+                background-color: hsl(var(--bg-100)) !important;
                 border-radius: 0.5rem !important;
             }
             
