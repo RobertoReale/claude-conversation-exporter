@@ -53,6 +53,9 @@ This bookmarklet:
 - Only loads two external libraries from trusted CDNs (html2canvas and jsPDF)
 - Generates the export files locally on your device
 
+## Known bugs
+position of bold words and <code class="...">...</code> tags
+
 ## License
 
 MIT License
