@@ -1,21 +1,28 @@
 javascript:(function(){
     // ---------------------------
-    // Selettori principali
+    // Main Selectors
     // ---------------------------
     const SELECTORS = {
         MAIN_CONTAINER: "div.flex-1.flex.flex-col.gap-3.px-4.max-w-3xl.mx-auto.w-full.pt-1",
         CHAT_TITLE: "button[data-testid='chat-menu-trigger']",
+        USER_MESSAGES: "div.font-user-message",
+        CLAUDE_MESSAGES: "div[data-testid='chat-message-content']",
 
-        // Documenti/allegati
+        // Documents/attachments
         DOCUMENT_CONTAINERS: "div.mx-0\\.5.mb-3.flex.flex-wrap.gap-2",
         DOCUMENT_ITEMS: ".font-styrene.transition-all.rounded-lg",
 
         // Disclaimer: "Claude può commettere errori..."
-        DISCLAIMER_CONTAINER: "div.ml-1.mt-0\\.5.flex.items-center.transition-transform.duration-300.ease-out"
+        DISCLAIMER_CONTAINER: "div.ml-1.mt-0\\.5.flex.items-center.transition-transform.duration-300.ease-out",
+        
+        // Code and math
+        CODE_BLOCKS: "pre",
+        INLINE_CODE: "code:not(pre code)",
+        MATH_ELEMENTS: ".katex, .katex-display, .math, .math-display"
     };
 
     // ---------------------------
-    // Dipendenze
+    // Dependencies
     // ---------------------------
     const DEPENDENCIES = {
         HTML2CANVAS_URL: 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js',
@@ -23,7 +30,7 @@ javascript:(function(){
     };
 
     // ---------------------------
-    // Stato e pulizia
+    // State and cleanup
     // ---------------------------
     let isLoading = false;
     let cleanup = {
@@ -33,15 +40,16 @@ javascript:(function(){
         tempElements: []
     };
 
-    // Opzioni di export
+    // Export options
     let exportOptions = {
         limit: null,
         order: 'start',
-        removeDocuments: true // sempre attivo
+        removeDocuments: true, // Always active
+        addMessageLabels: true  // Add "You:" and "Claude:" labels
     };
 
     // ---------------------------
-    // Utility di notifica e pulizia
+    // Notification and cleanup utilities
     // ---------------------------
     function handleError(message, error = null) {
         console.error(message, error);
@@ -189,7 +197,7 @@ javascript:(function(){
     }
 
     // ---------------------------
-    // Rimozione allegati e spazi vuoti
+    // Remove attachments and empty spaces
     // ---------------------------
     function removeDocumentAttachments(container) {
         try {
@@ -203,7 +211,7 @@ javascript:(function(){
                         documentItems.forEach(item => item.remove());
                     }
                 }
-                // Rimuove eventuali <img> / preview con classe object-cover
+                // Remove any <img> / previews with object-cover class
                 const objectCovers = docContainer.querySelectorAll('.object-cover');
                 objectCovers.forEach(cover => {
                     const parentDiv = cover.closest('div:not(.group)');
@@ -215,7 +223,7 @@ javascript:(function(){
                 });
             });
             
-            // Altri residui
+            // Other residuals
             const allObjectCovers = container.querySelectorAll('.object-cover');
             allObjectCovers.forEach(cover => {
                 const parentDiv = cover.closest('div:not(.group)');
@@ -232,7 +240,7 @@ javascript:(function(){
 
     function removeUnusedSpaces(container) {
         try {
-            // Rimuove la sezione "Claude può commettere errori..."
+            // Remove the "Claude può commettere errori..." section
             const disclaimers = container.querySelectorAll(SELECTORS.DISCLAIMER_CONTAINER);
             disclaimers.forEach(d => {
                 const parent = d.parentNode;
@@ -247,10 +255,10 @@ javascript:(function(){
     }
 
     // ---------------------------
-    // Rimuovi classi di margin/padding di Tailwind (o simili)
+    // Remove Tailwind margin/padding classes
     // ---------------------------
     function removeMarginPaddingClasses(container) {
-        // Aggiungi qui le classi di spacing che vuoi rimuovere
+        // Add spacing classes to remove
         const spacingClasses = [
             'm-1','m-2','m-3','m-4','m-5','m-6','m-7','m-8','m-9','m-10','m-11','m-12',
             'mb-1','mb-2','mb-3','mb-4','mb-5','mb-6','mb-7','mb-8','mb-9','mb-10','mb-11','mb-12',
@@ -269,7 +277,7 @@ javascript:(function(){
     }
 
     // ---------------------------
-    // Rimozione ricorsiva di contenitori completamente vuoti
+    // Recursively remove empty containers
     // ---------------------------
     function removeAllEmptyContainers(container) {
         let repeat = true;
@@ -277,9 +285,9 @@ javascript:(function(){
             repeat = false;
             const allElements = container.querySelectorAll('*');
             allElements.forEach(el => {
-                // Evita di rimuovere il container principale
+                // Avoid removing the main container
                 if (el === container) return;
-                // Se non ha figli e non ha testo
+                // If it has no children and no text
                 if (!el.hasChildNodes() || el.textContent.trim() === '') {
                     el.remove();
                     repeat = true;
@@ -289,11 +297,11 @@ javascript:(function(){
     }
 
     // ---------------------------
-    // Filtra e applica opzioni
+    // Apply export options
     // ---------------------------
     function applyExportOptions(container, options) {
         try {
-            // Limite di messaggi
+            // Message limit
             const allMessages = Array.from(container.querySelectorAll('.group'));
             if (options.limit && options.limit < allMessages.length) {
                 let messagesToKeep;
@@ -319,11 +327,27 @@ javascript:(function(){
                 }
             }
 
-            // Rimuove allegati, disclaimer e simili
+            // Add message role labels if enabled
+            if (options.addMessageLabels) {
+                const messages = container.querySelectorAll('[data-testid="chat-message"]');
+                messages.forEach(message => {
+                    const isUser = message.querySelector('.font-user-message');
+                    const content = message.querySelector('[data-testid="chat-message-content"]');
+                    
+                    if (content && !content.querySelector('.message-role')) {
+                        const roleLabel = document.createElement('div');
+                        roleLabel.className = 'message-role';
+                        roleLabel.textContent = isUser ? 'You:' : 'Claude:';
+                        content.insertBefore(roleLabel, content.firstChild);
+                    }
+                });
+            }
+
+            // Remove attachments, disclaimer, and similar
             removeDocumentAttachments(container);
             removeUnusedSpaces(container);
 
-            // Rimuove classi di spacing e contenitori vuoti
+            // Remove spacing classes and empty containers
             removeMarginPaddingClasses(container);
             removeAllEmptyContainers(container);
 
@@ -333,7 +357,7 @@ javascript:(function(){
     }
 
     // ---------------------------
-    // Mostra popup per scegliere formato
+    // Format selection popup
     // ---------------------------
     function showFormatSelectionModal() {
         if (isLoading) return;
@@ -375,7 +399,7 @@ javascript:(function(){
             const optionsContainer = document.createElement('div');
             optionsContainer.style.margin = '20px 0';
             
-            // Input per limite di messaggi
+            // Message limit input
             const limitLabel = document.createElement('label');
             limitLabel.textContent = 'Number of messages to export: ';
             limitLabel.style.marginRight = '10px';
@@ -392,7 +416,7 @@ javascript:(function(){
             limitLabel.appendChild(limitInput);
             optionsContainer.appendChild(limitLabel);
 
-            // Ordine
+            // Message order
             const orderLabel = document.createElement('div');
             orderLabel.textContent = 'Message order:';
             orderLabel.style.marginTop = '15px';
@@ -443,6 +467,27 @@ javascript:(function(){
             radioContainer.appendChild(startContainer);
             radioContainer.appendChild(endContainer);
             optionsContainer.appendChild(radioContainer);
+            
+            // Add labels option
+            const labelsContainer = document.createElement('div');
+            labelsContainer.style.display = 'flex';
+            labelsContainer.style.alignItems = 'center';
+            labelsContainer.style.justifyContent = 'center';
+            labelsContainer.style.margin = '15px 0';
+            
+            const labelsCheck = document.createElement('input');
+            labelsCheck.type = 'checkbox';
+            labelsCheck.id = 'addLabelsCheck';
+            labelsCheck.checked = true;
+            
+            const labelsLabel = document.createElement('label');
+            labelsLabel.textContent = 'Add "You:" and "Claude:" labels';
+            labelsLabel.setAttribute('for', 'addLabelsCheck');
+            labelsLabel.style.marginLeft = '8px';
+            
+            labelsContainer.appendChild(labelsCheck);
+            labelsContainer.appendChild(labelsLabel);
+            optionsContainer.appendChild(labelsContainer);
 
             modalContent.appendChild(title);
             modalContent.appendChild(subtitle);
@@ -456,7 +501,8 @@ javascript:(function(){
                 return { 
                     limit: isNaN(limitValue) ? null : limitValue,
                     order: document.querySelector('input[name="messageOrder"]:checked').value,
-                    removeDocuments: true
+                    removeDocuments: true,
+                    addMessageLabels: document.getElementById('addLabelsCheck').checked
                 };
             };
 
@@ -511,7 +557,7 @@ javascript:(function(){
     }
 
     // ---------------------------
-    // Caricamento dipendenze
+    // Load dependencies
     // ---------------------------
     async function loadDependencies(format) {
         if (isLoading) return;
@@ -539,24 +585,242 @@ javascript:(function(){
     }
 
     // ---------------------------
-    // Avvio dell'esportazione
+    // Start export
     // ---------------------------
     async function initExport(format) {
         try {
+            // Check if we're on Claude.ai
+            if (!window.location.href.includes('claude.ai')) {
+                throw new Error('This bookmarklet only works on Claude chat pages');
+            }
+            
             const mainContainer = document.querySelector(SELECTORS.MAIN_CONTAINER);
             if (!mainContainer) {
                 throw new Error('Chat conversation container not found');
             }
             
-            // Clona il container
+            // Clone the container
             const exportContainer = mainContainer.cloneNode(true);
             
-            // Applica le opzioni
+            // Apply the options
             if (exportOptions) {
                 applyExportOptions(exportContainer, exportOptions);
             }
             
-            // Header (titolo chat)
+            // Add styling for export
+            const styleSheet = document.createElement("style");
+            styleSheet.textContent = `
+                .screenshot-container {
+                    background-color: white !important;
+                    color: black !important;
+                    padding: 20px !important;
+                }
+                
+                /* User messages style */
+                .screenshot-container .font-user-message {
+                    font-family: var(--font-sans-serif, Arial, sans-serif) !important;
+                    font-size: 1rem !important;
+                    line-height: 1.6 !important;
+                    color: hsl(var(--text-100, #333)) !important;
+                    margin-bottom: 0 !important;
+                    padding: 0.5px !important;
+                    background-color: transparent !important;
+                    border-radius: 0.25rem !important;
+                }
+                
+                /* User message container */
+                .screenshot-container [data-testid="user-message"] {
+                    padding: 0 !important;
+                    margin: 0 !important;
+                }
+                
+                /* Message container styles */
+                .screenshot-container .group {
+                    padding: 0.75rem !important;
+                    margin-bottom: 1rem !important;
+                    background-color: hsl(var(--bg-100, #f8f9fa)) !important;
+                    border-radius: 0.5rem !important;
+                }
+                
+                /* Claude messages style */
+                .screenshot-container [data-testid="chat-message-content"] {
+                    font-family: var(--font-serif, Georgia, serif) !important;
+                    font-size: 1rem !important;
+                    line-height: 1.65 !important;
+                    color: hsl(var(--text-100, #333)) !important;
+                    letter-spacing: -0.015em !important;
+                    margin-bottom: 1.5rem !important;
+                    padding: 0.75rem !important;
+                }
+                
+                /* Code block style */
+                .screenshot-container pre {
+                    font-family: 'Fira Code', 'Fira Mono', Menlo, Consolas, 'DejaVu Sans Mono', monospace !important;
+                    font-size: 0.875rem !important;
+                    line-height: 1.625 !important;
+                    color: #abb2bf !important;
+                    background-color: #282c34 !important;
+                    padding: 1em !important;
+                    border-radius: 0.5rem !important;
+                    tab-size: 2 !important;
+                    overflow-x: auto !important;
+                    margin: 1em 0 !important;
+                    text-shadow: 0 1px rgba(0,0,0,.3) !important;
+                    white-space: pre !important;
+                    word-spacing: normal !important;
+                    word-break: normal !important;
+                }
+                
+                /* Inline code style */
+                .screenshot-container code:not(pre code) {
+                    font-family: 'Fira Code', 'Fira Mono', Menlo, Consolas, 'DejaVu Sans Mono', monospace !important;
+                    font-size: 0.9rem !important;
+                    background-color: rgba(0, 0, 0, 0.05) !important;
+                    color: hsl(var(--danger-000, #8B0000)) !important;
+                    padding: 0px 4px !important;
+                    margin: 0 2px !important;
+                    border: 0.5px solid hsl(var(--border-300, #DDD)) !important;
+                    border-radius: 0.3rem !important;
+                    white-space: pre-wrap !important;
+                }
+                
+                /* Strong and bold text */
+                .screenshot-container strong, .screenshot-container b {
+                    font-weight: 700 !important;
+                    vertical-align: baseline !important;
+                    position: static !important;
+                    display: inline !important;
+                    line-height: inherit !important;
+                    padding-top: 0 !important;
+                    padding-bottom: 0 !important;
+                    margin-top: 0 !important;
+                    margin-bottom: 0 !important;
+                    transform: none !important;
+                    float: none !important;
+                }
+                
+                /* KaTeX math formulas */
+                .screenshot-container .katex-display {
+                    display: block !important;
+                    margin: 1em 0 !important;
+                    text-align: center !important;
+                    overflow: visible !important;
+                }
+                
+                .screenshot-container .katex {
+                    font-family: KaTeX_Main, Times New Roman, serif !important;
+                    line-height: 1.2 !important;
+                    text-rendering: auto !important;
+                    font-size: 1.1em !important;
+                    display: inline-block !important;
+                }
+                
+                .screenshot-container .katex .mfrac .frac-line {
+                    position: relative !important;
+                    display: block !important;
+                    margin: 0.1em 0 !important;
+                    border-bottom: 1px solid !important;
+                    border-top: 0 !important;
+                }
+                
+                .screenshot-container .katex .mfrac .num,
+                .screenshot-container .katex .mfrac .den {
+                    display: block !important;
+                    text-align: center !important;
+                }
+                
+                .screenshot-container .katex .mfrac .num {
+                    margin-bottom: 0.15em !important;
+                }
+                
+                .screenshot-container .katex .mfrac .den {
+                    margin-top: 0.15em !important;
+                }
+                
+                /* List styles */
+                .screenshot-container ol {
+                    list-style-type: decimal !important;
+                    padding-left: 2.5em !important;
+                    margin-left: 0.5em !important;
+                    margin-top: 1em !important;
+                    margin-bottom: 1em !important;
+                }
+                
+                .screenshot-container ol li {
+                    padding-left: 0.5em !important;
+                    margin-bottom: 0.5em !important;
+                }
+                
+                .screenshot-container ul {
+                    list-style-type: disc !important;
+                    padding-left: 2.5em !important;
+                    margin-left: 0.5em !important;
+                    margin-top: 1em !important;
+                    margin-bottom: 1em !important;
+                }
+                
+                .screenshot-container ul li {
+                    padding-left: 0.5em !important;
+                    margin-bottom: 0.5em !important;
+                }
+                
+                /* Tables */
+                .screenshot-container table {
+                    border-collapse: collapse !important;
+                    width: 100% !important;
+                    margin: 1rem 0 !important;
+                }
+                
+                .screenshot-container th {
+                    background-color: hsl(var(--bg-300, #e9ecef)) !important;
+                    color: hsl(var(--text-000, #212529)) !important;
+                    font-weight: bold !important;
+                    text-align: left !important;
+                    padding: 0.75rem !important;
+                    border: 1px solid hsl(var(--border-200, #dee2e6)) !important;
+                }
+                
+                .screenshot-container td {
+                    padding: 0.75rem !important;
+                    border: 1px solid hsl(var(--border-200, #dee2e6)) !important;
+                }
+                
+                .screenshot-container tr:nth-child(even) {
+                    background-color: hsl(var(--bg-100, #f8f9fa)) !important;
+                }
+                
+                /* Chat header */
+                .chat-title-container {
+                    margin-bottom: 1.5rem;
+                    margin-top: 1.5rem;
+                    border-bottom: 2px solid #eee;
+                    padding-bottom: 1rem;
+                }
+                
+                .chat-title-text {
+                    font-size: 24px;
+                    margin-bottom: 8px;
+                    font-weight: bold;
+                }
+                
+                .chat-timestamp {
+                    font-size: 14px;
+                    opacity: 0.7;
+                }
+                
+                /* Message labels */
+                .message-role {
+                    font-weight: bold;
+                    margin-bottom: 0.5rem;
+                    font-size: 0.875rem;
+                    color: hsl(var(--text-200, #6c757d));
+                }
+            `;
+            document.head.appendChild(styleSheet);
+            cleanup.styleSheet = styleSheet;
+            cleanup.tempElements.push(styleSheet);
+            
+            // Header (chat title)
             const titleElement = document.querySelector(SELECTORS.CHAT_TITLE);
             const titleText = titleElement ? titleElement.textContent : 'Claude Chat';
             
@@ -599,7 +863,7 @@ javascript:(function(){
                 background-color: white;
                 box-shadow: 0 1px 3px rgba(0,0,0,0.12);
                 border-radius: 8px;
-                padding: 0; /* <-- azzerato */
+                padding: 0;
                 position: absolute;
                 left: -9999px;
                 top: 0;
@@ -609,14 +873,14 @@ javascript:(function(){
             document.body.appendChild(exportWrapper);
             cleanup.tempElements.push(exportWrapper);
             
-            // Esporta
+            // Export
             if (format === 'pdf') {
                 await generatePDF(exportWrapper, titleText);
             } else {
                 await generatePNG(exportWrapper, titleText);
             }
             
-            // Rimuove il clone
+            // Remove the clone
             if (exportWrapper.parentNode) {
                 exportWrapper.remove();
                 const index = cleanup.tempElements.indexOf(exportWrapper);
@@ -630,7 +894,7 @@ javascript:(function(){
     }
 
     // ---------------------------
-    // Generazione PDF
+    // PDF Generation
     // ---------------------------
     async function generatePDF(container, filename) {
         try {
@@ -677,13 +941,13 @@ javascript:(function(){
                 showProgress(85, `Creating ${totalPages} page PDF...`);
             }
             
-            // Prima pagina
+            // First page
             pdf.addImage(imgData, 'JPEG', 0, 0, imgWidth, imgHeight);
             
             let heightLeft = imgHeight - pageHeight;
             let pageNum = 1;
             
-            // Altre pagine
+            // Additional pages
             while (heightLeft > 0) {
                 pageNum++;
                 showProgress(85 + (pageNum / totalPages) * 10, `Adding page ${pageNum}/${totalPages}...`);
@@ -714,7 +978,7 @@ javascript:(function(){
     }
 
     // ---------------------------
-    // Generazione PNG
+    // PNG Generation
     // ---------------------------
     async function generatePNG(container, filename) {
         try {
@@ -736,7 +1000,7 @@ javascript:(function(){
                 onclone: (clonedDoc) => {
                     const clonedContainer = clonedDoc.querySelector('.screenshot-container');
                     if (clonedContainer) {
-                        clonedContainer.style.padding = '0';
+                        clonedContainer.style.padding = '20px';
                     }
                 }
             });
@@ -760,7 +1024,7 @@ javascript:(function(){
     }
 
     // ---------------------------
-    // Formattazione aggiuntiva
+    // Additional formatting
     // ---------------------------
     function processCodeFormatting(container) {
         try {
@@ -871,7 +1135,13 @@ javascript:(function(){
         }
     }
 
-    // Avvio
+    // Check if we're on Claude.ai
+    if (!window.location.href.includes('claude.ai')) {
+        handleError('This bookmarklet only works on Claude chat pages');
+        return;
+    }
+
+    // Start
     try {
         showFormatSelectionModal();
     } catch (error) {
