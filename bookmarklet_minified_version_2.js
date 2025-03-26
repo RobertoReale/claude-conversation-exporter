@@ -145,7 +145,7 @@ javascript:!function(){let e={MAIN_CONTAINER:"div.flex-1.flex.flex-col.gap-3.px-
                     border-bottom: 1px solid !important;
                     border-top: 0 !important;
                 }
-
+                
                 .screenshot-container .katex .mfrac .frac-line::after {
                     content: '' !important;
                     display: block !important;
